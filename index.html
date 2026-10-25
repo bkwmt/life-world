@@ -27,7 +27,7 @@ body { display: flex; flex-direction: column; height: 100%; height: 100dvh; over
 .counter { font-variant-numeric: tabular-nums; color: var(--bluegrey); min-width: 70px; text-align: center; }
 main { flex: 1; display: flex; min-height: 0; }
 #view { flex: 1; position: relative; min-width: 0; }
-#view canvas { display: block; }
+#view canvas { display: block; touch-action: none; }   /* 兩指捏合縮放由程式接手，不讓瀏覽器縮頁面 */
 /* DOM 名牌層（labels.js）：絕對定位覆在 canvas 上，不擋指標；transform 由每幀投影寫入 */
 .labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .tag { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11.5px; line-height: 1;
@@ -144,7 +144,7 @@ body.panel-hidden #panel { display: none; }
     <span><i class="sw sw-claim"></i>有中介宣稱的事件</span>
     <span><i class="sw sw-year"></i>絕對年</span>
     <span><i class="sw sw-claim"></i>島緣的燈＝一個事件（走過才亮，點燈跳過去）</span>
-    <span class="dim">點島＝地點卡（Esc 回來）；軸＝口述出現順序；不推算年份</span>
+    <span class="dim">點島＝地點卡（Esc 回來）；滾輪／兩指／＋－縮放（0 還原）；軸＝口述出現順序；不推算年份</span>
   </div>
   <details class="credits"><summary>素材與授權</summary>
     <p>人物、樓、島、樹、路燈、樂器與器材：全部是程序式 3D，由程式依 scene.json 的資料組成，不用任何現成圖片素材；做法借自 <a href="https://puma.taipei/heart-island">HEART 政策島</a>（只借做法，程式自寫）；<a href="maker.html">捏人器</a>可自己調人物。
@@ -874,7 +874,9 @@ function walkPath(from, to, pathCells = []) {
 //   follow：每幀 lerp 跟主角（原本的行為），偏移量慢慢回到預設
 //   fly   ：flyTo() 同時插值注視點與偏移量，不受播放速度影響；pointerdown 即中斷成 free
 //   free  ：停在當下，直到 stepTo() 呼叫 follow()
+//   縮放（之十七補）：zoomK 乘在偏移量上，三態都適用；滾輪、兩指、鍵盤 +／− 都改它，範圍 ZOOM_MIN～ZOOM_MAX
 
+const ZOOM_MIN = 0.35, ZOOM_MAX = 2.6;
 const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 class Rig {
@@ -884,10 +886,11 @@ class Rig {
     this.homeOffset = new THREE.Vector3(0, 22, 26);
     this.offset = this.homeOffset.clone();
     this.target = hero.position.clone();
+    this.zoomK = 1;
     this.apply();
   }
   apply() {
-    this.camera.position.copy(this.target).add(this.offset);
+    this.camera.position.copy(this.target).addScaledVector(this.offset, this.zoomK);
     this.camera.lookAt(this.target.x, this.target.y + 1, this.target.z);
   }
   update(dt) {
@@ -909,6 +912,7 @@ class Rig {
   }
   interrupt() { this.gen++; if (this.mode === 'fly') this.mode = 'free'; }
   follow() { this.gen++; this.mode = 'follow'; }
+  zoomBy(factor) { this.zoomK = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.zoomK * factor)); return this.zoomK; }
 }
 
 // timeline.js — 底部時間尺：敘事順序為軸、人生階段色帶、段刻度、錨點原文字標籤、絕對年小旗、游標（2026-10-25）
@@ -1099,6 +1103,7 @@ const SKY_MS = 1500;             // 天空色溫漸變
 const FLY_MS = 800;              // 鏡頭飛行
 const SHADOW_HALF = 24;          // 太陽的正交陰影相機半寬（世界單位），跟著鏡頭注視點走
 const SUN_DIR = new THREE.Vector3(12, 20, 8).normalize();
+const FOG_NEAR = 45, FOG_FAR = 150;   // 霧的基準距離（zoomK 1）
 
 // ── 資料 ───────────────────────────────────────────────────────────────
 async function loadJSON(q, fallback) {
@@ -1213,7 +1218,7 @@ async function main() {
 
   // 天空與霧：隨人生階段帶換色溫，1.5 秒漸變
   let skyNow = skyFor(scene.events[0]?.time.stage || ''), skyGen = 0;
-  three.background = new THREE.Color(skyNow.sky); three.fog = new THREE.Fog(skyNow.fog, 45, 150); sun.color.set(skyNow.light);
+  three.background = new THREE.Color(skyNow.sky); three.fog = new THREE.Fog(skyNow.fog, FOG_NEAR, FOG_FAR); sun.color.set(skyNow.light);
   function applySky(stage, instant = false) {
     const goal = skyFor(stage);
     document.getElementById('stage').textContent = stage;
@@ -1394,8 +1399,27 @@ async function main() {
     if (seq >= 0) { renderPanel(panel, scene, scene.events[seq], ref); for (const pid of Object.keys(placeTag)) labels.on(placeTag[pid], pid === scene.events[seq].place); }
   }
   const ray = new THREE.Raycaster(); let downAt = null;
-  renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; rig.interrupt(); });
+  // 縮放：滾輪（含觸控板）、兩指捏合、鍵盤 +／−；倍率掛在鏡頭偏移上，三態都適用
+  const pointers = new Map(); let pinchDist = 0;
+  renderer.domElement.addEventListener('wheel', (e) => { e.preventDefault(); rig.zoomBy(Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    downAt = [e.clientX, e.clientY]; rig.interrupt();
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinchDist = Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  });
+  renderer.domElement.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (pinchDist > 0 && d > 0) rig.zoomBy(pinchDist / d);
+      pinchDist = d; downAt = null;                    // 捏合中不算點擊
+    }
+  });
+  const endPointer = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinchDist = 0; };
+  renderer.domElement.addEventListener('pointercancel', endPointer);
   renderer.domElement.addEventListener('pointerup', (e) => {
+    endPointer(e);
     if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) { downAt = null; return; }
     downAt = null;
     const r = renderer.domElement.getBoundingClientRect();
@@ -1423,6 +1447,7 @@ async function main() {
     if (e.key === 'ArrowRight') { stop(); stepTo(seq + 1); } else if (e.key === 'ArrowLeft') { stop(); stepTo(seq - 1); }
     else if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
     else if (e.key === 'Escape') closePlace();
+    else if (e.key === '+' || e.key === '=') rig.zoomBy(0.8); else if (e.key === '-' || e.key === '_') rig.zoomBy(1.25); else if (e.key === '0') rig.zoomK = 1;
   });
 
   // ── 迴圈 ─────────────────────────────────────────────────────────────
@@ -1436,6 +1461,9 @@ async function main() {
     rig.update(dt);
     // 太陽跟著鏡頭注視點走，陰影相機才涵蓋眼前這幾座島；海的漣漪推進
     sun.target.position.copy(rig.target); sun.position.copy(rig.target).addScaledVector(SUN_DIR, 60);
+    const half = SHADOW_HALF * Math.max(1, rig.zoomK);          // 拉遠時陰影相機跟著放大，遠島才有影子
+    const fz = Math.max(1, rig.zoomK); three.fog.near = FOG_NEAR * fz; three.fog.far = FOG_FAR * fz;   // 霧也跟著拉遠，不然拉遠全是霧
+    if (sun.shadow.camera.right !== half) { Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half }); sun.shadow.camera.updateProjectionMatrix(); }
     world.sea.material.uniforms.uTime.value = t;
     renderer.render(three, camera);
     labels.update(camera, viewW, viewH);
