@@ -2,7 +2,7 @@
 
 **網址**：https://bkwmt.github.io/life-world/ （手機、平板、桌機皆可開；需要 WebGL）
 
-這是一個「生命史播放器」：把一位幕後音樂工作者在口述歷史裡講到的事件，做成一座可以走的像素群島。
+這是一個「生命史播放器」：把一位幕後音樂工作者在口述歷史裡講到的事件，做成一座可以走的 3D 群島。
 一格六角島＝一個地點（家、學校、樂團、表演場所、唱片公司、錄音室……），島群沿生命流向從左到右排；
 主角沿「生命路」（相鄰兩事件地點不同就是一條路）走過橋與島，島緣的燈一事件一盞、走過才亮；
 底部時間尺是**回憶時間**（軸＝口述出現的順序＋人生階段帶，不推算年份）；中介宣稱畫成中介物從來源飄到受者；
@@ -16,14 +16,11 @@
 - 口述材料：臺北流行音樂中心「臺灣流行音樂口述歷史」（pmdb.taipei）屠穎卷的逐字稿；事件、中介宣稱與關係由 Claude 三段子代理抽取（抽取 → 全文查核 → 裁決），
   屬於中研院資訊所音樂與文化科技實驗室「口述歷史結構化抽取」研究的實驗產出（ICCCM 2026 海報：Ming Cheng、Yun-En Tsai、Li Su）。
 - 地點與路線是跨人物共用的登錄簿（只增不改），之後其他音樂人會走進同一座群島。
-- 14 位人物的小頭像取自 pmdb.taipei 人物頁照片，縮成 24×24、16 色的像素圖；人物體型與髮型由屬性與照片判定。
+- 14 位人物的名牌頭像取自 pmdb.taipei 人物頁照片（中央裁方、縮到 128 px）；人物體型與髮型由屬性與照片判定。
 
 ## 素材與授權
 
-- 人物：程序式 Q 版 3D，零件由程式依人物屬性組成（做法借自 [HEART 政策島](https://puma.taipei/heart-island)，程式自寫）；**[捏人器](https://bkwmt.github.io/life-world/maker.html)** 可自己調零件、匯出覆蓋。
-- 城市磚、樹、路燈：[Kenney Roguelike Modern City](https://opengameart.org/content/roguelike-modern-city-pack)（CC0）。
-- 樂器圖示：[CC0 Music Icons](https://opengameart.org/content/cc0-music-icons)（CC0）。
-- 麥克風、混音台、MIDI、卡帶、黑膠、電視、樂譜、封套、卷軸、音符、耳機圖示：本專案自繪（CC0）。
+- 人物、樓、島、樹、路燈、樂器與器材：全部是程序式 3D，由程式依資料組成，不用任何現成圖片素材（做法借自 [HEART 政策島](https://puma.taipei/heart-island)：反鋸齒、柔陰影、ACES 色調映射、零件庫；程式自寫）；**[捏人器](https://bkwmt.github.io/life-world/maker.html)** 可自己調人物零件、匯出覆蓋。
 - Three.js r160（MIT）。
 
 本頁只放打包好的單檔播放器（`index.html`）與捏人器（`maker.html`），原始碼與資料在研究專案的私有 repo。
