@@ -528,6 +528,19 @@ function animateFigure(g, t, walking) {
 }
 function wave(g, seconds, t) { g.userData.waveUntil = t + seconds; }
 
+// 非被追蹤者變灰（2026-10-26 使用者：主角以外的人物有點變灰，以後別的主角進來時一眼分得出誰是這一卷在追蹤的人）。
+// 做法：每個材質的顏色往「同亮度的灰」拉 k（0＝原色、1＝全灰）；原色存在材質的 userData.base，可以反覆呼叫、k＝0 還原。
+// 手持配件是共用零件庫的材質，不在這裡改（樂器維持原色，也讓配件在灰人身上比較顯眼）。
+function muteFigure(g, k) {
+  const gray = new THREE.Color();
+  for (const m of Object.values(g.userData.mats)) {
+    if (!m.userData.base) m.userData.base = m.color.clone();
+    const b = m.userData.base, lum = 0.2126 * b.r + 0.7152 * b.g + 0.0722 * b.b;   // 線性空間的亮度
+    m.color.copy(b).lerp(gray.setRGB(lum, lum, lum), k);
+  }
+  g.userData.muted = k;
+}
+
 // 整體染色（宣稱受者閃一下）：null 還原
 function tintFigure(g, color) {
   for (const m of Object.values(g.userData.mats)) { if (color) m.emissive.set(color).multiplyScalar(0.55); else m.emissive.set('#000000'); }
