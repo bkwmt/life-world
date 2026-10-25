@@ -20,10 +20,10 @@
 
 ## 素材與授權
 
-- 人物圖層：[Universal LPC Spritesheet Character Generator](https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator)（CC-BY-SA 4.0 使用並釋出）。作者共 16 位：Benjamin K. Smith (BenCreating)、Durrani、Eliza Wyatt (ElizaWy)、ElizaWy、Evert、JaidynReiman、Joe White、Johannes Sjölund (wulax)、Manuel Riecke (MrBeast)、Matthew Krohn (makrohn)、MuffinElZangano、Pierre Vigier (pvigier)、Stephen Challener (Redshrike)、TheraHedwig、bluecarrot16、thecilekli
+- 人物：程序式 Q 版 3D，零件由程式依人物屬性組成（做法借自 [HEART 政策島](https://puma.taipei/heart-island)，程式自寫）；**[捏人器](https://bkwmt.github.io/life-world/maker.html)** 可自己調零件、匯出覆蓋。
 - 城市磚、樹、路燈：[Kenney Roguelike Modern City](https://opengameart.org/content/roguelike-modern-city-pack)（CC0）。
 - 樂器圖示：[CC0 Music Icons](https://opengameart.org/content/cc0-music-icons)（CC0）。
 - 麥克風、混音台、MIDI、卡帶、黑膠、電視、樂譜、封套、卷軸、音符、耳機圖示：本專案自繪（CC0）。
 - Three.js r160（MIT）。
 
-本頁只放打包好的單檔播放器（`index.html`），原始碼與資料在研究專案的私有 repo。
+本頁只放打包好的單檔播放器（`index.html`）與捏人器（`maker.html`），原始碼與資料在研究專案的私有 repo。
